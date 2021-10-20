@@ -21,7 +21,8 @@ int main(int argc, char** argv)
     char* IP;
     struct sockaddr_in sa;
     struct hostent* host;
-
+    char buffer[1024] = {0};
+    
     if((argc == 1) || (strcmp(argv[1], "-h") == 0))
     {
         help();
@@ -34,6 +35,7 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
+    // socket creation
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
         perror("Error socket creation: ");
@@ -67,25 +69,46 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("Connected to %s\n", IP);
+        printf("Connected to %s\n\n", IP);
     }
 
     // send data
-    char buffer[1024];
-    sprintf(buffer, "GET / HTTP/1.0\r\nHost: %s\r\n\r\n", domain);
-    if(write(sockfd, buffer, strlen(buffer)) < 0)
+    int end;
+    while (fgets(buffer, 1024, stdin))
     {
-        perror("[write()] Error: ");
-        return EXIT_FAILURE;
+        if((end = write(sockfd, buffer, strlen(buffer))) < 0)
+        {
+            perror("[write()] Error: ");
+            return EXIT_FAILURE;
+        }
+        else if(end == 0)
+            break;
     }
+    printf("Message sent\n");
+
 
     // receive data
+    int got_resp = 0;
+    printf("Waiting for reply...\n\n");
     while(1)
     {
-        if(read(sockfd, buffer, 1024) > 0)
+        if((end = read(sockfd, buffer, 1024)) < 0)
         {
-            printf("%s", buffer);
-            break;
+            perror("[write()] Error: ");
+            return EXIT_FAILURE;
+        }
+        else
+        {
+            if(got_resp == 0)
+                printf("Got response:\n----------------------------------------\n");
+            got_resp = 1;
+            
+            if(end != 0)
+            {
+                printf("%s\n", buffer);
+            }
+            else
+                break;
         }
     }
 
